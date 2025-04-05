@@ -1,50 +1,90 @@
 const express = require("express");
-const mongoose = require("mongoose");
 const app = express();
-const cors = require("cors");
-const bodyParser = require("body-parser");
+const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(bodyParser.json());
+// Dummy in-memory DB
+const db = {
+  teaches: [] // { uid, ask, answers: [] }
+};
 
-const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI;
-
-mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.log(err));
-
-const messageSchema = new mongoose.Schema({
-  ask: String,
-  answers: [String],
-  uid: String
+// Home route
+app.get("/", (req, res) => {
+  res.send("ChatBot API is alive!");
 });
 
-const Message = mongoose.model("Message", messageSchema);
-
-app.post("/teach", async (req, res) => {
-  const { ask, answers, uid } = req.body;
-  const message = new Message({ ask, answers, uid });
-
-  try {
-    await message.save();
-    res.status(200).json({ message: "Teaching recorded successfully!" });
-  } catch (err) {
-    res.status(400).json({ error: "Failed to save teaching." });
+// Teach the bot
+app.get("/bby/teach", (req, res) => {
+  const { ask, ans, uid } = req.query;
+  if (!ask || !ans || !uid) {
+    return res.status(400).json({ message: "Missing ask, ans, or uid" });
   }
-});
 
-app.get("/bby", async (req, res) => {
-  const { text, uid } = req.query;
-  const message = await Message.findOne({ ask: text });
+  const answers = ans.split(",").map(a => a.trim()).filter(a => a);
+  let record = db.teaches.find(t => t.uid === uid && t.ask.toLowerCase() === ask.toLowerCase());
 
-  if (message) {
-    res.json({ text: message.answers.join(", "), react: "" });
+  if (record) {
+    record.answers.push(...answers);
   } else {
-    res.json({ text: "Please teach me this sentence!🦆💨", react: "" });
+    record = { uid, ask, answers };
+    db.teaches.push(record);
   }
+
+  const totalTeachings = db.teaches.filter(t => t.uid === uid).length;
+
+  res.json({
+    message: "Teaching recorded successfully!",
+    ask,
+    userStats: {
+      user: {
+        totalTeachings
+      }
+    }
+  });
 });
 
+// Chat with the bot
+app.get("/bby", (req, res) => {
+  const { text, uid, font } = req.query;
+  if (!text || !uid) {
+    return res.status(400).json({ text: "Missing text or uid" });
+  }
+
+  const record = db.teaches.find(t => t.ask.toLowerCase() === text.toLowerCase());
+  if (!record) {
+    return res.json({ text: "Please teach me this sentence!🦆💨" });
+  }
+
+  const reply = record.answers[Math.floor(Math.random() * record.answers.length)];
+  res.json({ text: reply, react: font === "3" ? " 🧠" : "" });
+});
+
+// Show answers to a specific question
+app.get("/bby/msg", (req, res) => {
+  const { ask, uid } = req.query;
+  if (!ask || !uid) {
+    return res.status(400).json({ message: "Missing ask or uid" });
+  }
+
+  const record = db.teaches.find(t => t.uid === uid && t.ask.toLowerCase() === ask.toLowerCase());
+  if (!record) {
+    return res.json({ status: "Not Found", messages: [] });
+  }
+
+  const messages = record.answers.map((ans, i) => ({ index: i, ans }));
+  res.json({
+    status: "Success",
+    ask: record.ask,
+    messages
+  });
+});
+
+// List all teachers (user IDs)
+app.get("/bby/teachers", (req, res) => {
+  const teachers = [...new Set(db.teaches.map(t => t.uid))];
+  res.json({ status: "Success", teachers });
+});
+
+// Start server
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
 });

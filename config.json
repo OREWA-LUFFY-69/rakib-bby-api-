@@ -1,3 +1,7 @@
 {
+  "bs": "https://rakib-bby-api.onrender.com"
+},
+
+{
   "mongoURI": "mongodb+srv://rakib_adil:8YWjEmgoRJ3bWpHS@rakib-bby-api.dijqvo0.mongodb.net/?retryWrites=true&w=majority&appName=rakib-bby-api"
 }
