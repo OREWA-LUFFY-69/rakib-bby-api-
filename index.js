@@ -46,8 +46,10 @@ app.get("/bby/teach", async (req, res) => {
   // Calculate total teachings by the user
   const totalTeachings = await Teaching.countDocuments({ uid });
 
+  const responseMessage = `✅ Bot taught!\n\n❓ Ask: ${ask}\n✍️ Answers: ${answers.join(", ")}\n📚 You taught: ${totalTeachings} times`;
+
   res.json({
-    message: `Teaching recorded successfully!`,
+    message: responseMessage,
     ask,
     userStats: {
       user: {
