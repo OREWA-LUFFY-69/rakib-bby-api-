@@ -6,12 +6,6 @@ const db = {
   teaches: []
 };
 
-// Function to get random emoji for fun responses
-const getRandomEmoji = () => {
-  const emojis = ["🤖", "🦆", "🧠", "😾", "👾", "🚀", "💬", "🔥", "💡"];
-  return emojis[Math.floor(Math.random() * emojis.length)];
-};
-
 // Root route to check if API is alive
 app.get("/", (req, res) => {
   res.send("Rakib ChatBot API is alive!");
@@ -39,16 +33,16 @@ app.get("/bby/teach", (req, res) => {
 
   // Calculate total teachings by the user
   const totalTeachings = db.teaches.filter(t => t.uid === uid).length;
-  const randomEmoji = getRandomEmoji();
-
+  
   res.json({
-    message: `Teaching recorded successfully! ${randomEmoji}`,
+    message: `Teaching recorded successfully!`,
     ask,
     userStats: {
       user: {
         totalTeachings
       }
-    }
+    },
+    react: "🤖" // Directly add emoji in the response
   });
 });
 
@@ -64,14 +58,13 @@ app.get("/bby", (req, res) => {
   // Find the teaching record
   const record = db.teaches.find(t => t.ask.toLowerCase() === text.toLowerCase());
   if (!record) {
-    return res.json({ text: `Please teach me this sentence! 🦆💨 ${getRandomEmoji()}` });
+    return res.json({ text: `Please teach me this sentence! 🦆💨`, react: "🦆" });
   }
 
   // Randomly pick a reply
   const reply = record.answers[Math.floor(Math.random() * record.answers.length)];
-  const randomEmoji = getRandomEmoji();
 
-  res.json({ text: `${reply} ${randomEmoji}`, react: font === "3" ? " 🧠" : "" });
+  res.json({ text: `${reply} 🧠`, react: font === "3" ? "🧠" : "" });
 });
 
 // Get all messages for a user
@@ -91,22 +84,20 @@ app.get("/bby/msg", (req, res) => {
 
   // Map answers to messages
   const messages = record.answers.map((ans, i) => ({ index: i, ans }));
-  const randomEmoji = getRandomEmoji();
 
   res.json({
     status: "Success",
     ask: record.ask,
     messages,
-    react: randomEmoji
+    react: "🧠" // Add emoji in response
   });
 });
 
 // Get list of all teachers
 app.get("/bby/teachers", (req, res) => {
   const teachers = [...new Set(db.teaches.map(t => t.uid))]; // Get unique users
-  const randomEmoji = getRandomEmoji();
 
-  res.json({ status: "Success", teachers, react: randomEmoji });
+  res.json({ status: "Success", teachers, react: "🔥" });
 });
 
 // Get all teachings/messages
@@ -115,18 +106,11 @@ app.get("/bby/allmsgs", (req, res) => {
     ask: t.ask,
     ans: t.answers.join(", ")
   }));
-  const randomEmoji = getRandomEmoji();
 
-  res.json({ messages: allMessages, react: randomEmoji });
+  res.json({ messages: allMessages, react: "💬" });
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
-  res.json({ messages: allMessages, react: randomEmoji });
-});
-
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
