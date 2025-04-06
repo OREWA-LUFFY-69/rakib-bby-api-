@@ -1,10 +1,22 @@
 const express = require("express");
+const mongoose = require("mongoose");
+const { mongoURI } = require("./config.json"); // Import MongoDB URI
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const db = {
-  teaches: []
-};
+// MongoDB connection using mongoose
+mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("Connected to MongoDB"))
+  .catch(err => console.log("Error connecting to MongoDB:", err));
+
+// MongoDB Schema and Model for Teachings
+const teachingSchema = new mongoose.Schema({
+  uid: String,
+  ask: String,
+  answers: [String],
+});
+
+const Teaching = mongoose.model("Teaching", teachingSchema);
 
 // Root route to check if API is alive
 app.get("/", (req, res) => {
@@ -12,28 +24,28 @@ app.get("/", (req, res) => {
 });
 
 // Teach route to add new teaching
-app.get("/bby/teach", (req, res) => {
+app.get("/bby/teach", async (req, res) => {
   const { ask, ans, uid } = req.query;
-  
-  // Check if all required parameters are provided
+
   if (!ask || !ans || !uid) {
     return res.status(400).json({ message: "Missing ask, ans, or uid" });
   }
 
   const answers = ans.split(",").map(a => a.trim()).filter(a => a);
-  let record = db.teaches.find(t => t.uid === uid && t.ask.toLowerCase() === ask.toLowerCase());
+  let record = await Teaching.findOne({ uid, ask: ask.toLowerCase() });
 
   if (record) {
     record.answers.push(...answers); // Add new answers to existing record
+    await record.save();
   } else {
     // Create new record if not found
-    record = { uid, ask, answers };
-    db.teaches.push(record);
+    record = new Teaching({ uid, ask: ask.toLowerCase(), answers });
+    await record.save();
   }
 
   // Calculate total teachings by the user
-  const totalTeachings = db.teaches.filter(t => t.uid === uid).length;
-  
+  const totalTeachings = await Teaching.countDocuments({ uid });
+
   res.json({
     message: `Teaching recorded successfully!`,
     ask,
@@ -42,21 +54,19 @@ app.get("/bby/teach", (req, res) => {
         totalTeachings
       }
     },
-    react: "🤖" // Directly add emoji in the response
+    react: "🤖"
   });
 });
 
 // Chatbot response route
-app.get("/bby", (req, res) => {
+app.get("/bby", async (req, res) => {
   const { text, uid, font } = req.query;
-  
-  // Check for missing parameters
+
   if (!text || !uid) {
     return res.status(400).json({ message: "Missing text or uid" });
   }
 
-  // Find the teaching record
-  const record = db.teaches.find(t => t.ask.toLowerCase() === text.toLowerCase());
+  const record = await Teaching.findOne({ ask: text.toLowerCase() });
   if (!record) {
     return res.json({ text: `Please teach me this sentence! 🦆💨`, react: "🦆" });
   }
@@ -68,46 +78,45 @@ app.get("/bby", (req, res) => {
 });
 
 // Get all messages for a user
-app.get("/bby/msg", (req, res) => {
+app.get("/bby/msg", async (req, res) => {
   const { ask, uid } = req.query;
 
-  // Validate input parameters
   if (!ask || !uid) {
     return res.status(400).json({ message: "Missing ask or uid" });
   }
 
-  // Find the teaching record
-  const record = db.teaches.find(t => t.uid === uid && t.ask.toLowerCase() === ask.toLowerCase());
+  const record = await Teaching.findOne({ uid, ask: ask.toLowerCase() });
   if (!record) {
     return res.json({ status: "Not Found", messages: [] });
   }
 
-  // Map answers to messages
   const messages = record.answers.map((ans, i) => ({ index: i, ans }));
 
   res.json({
     status: "Success",
     ask: record.ask,
     messages,
-    react: "🧠" // Add emoji in response
+    react: "🧠"
   });
 });
 
 // Get list of all teachers
-app.get("/bby/teachers", (req, res) => {
-  const teachers = [...new Set(db.teaches.map(t => t.uid))]; // Get unique users
+app.get("/bby/teachers", async (req, res) => {
+  const teachers = await Teaching.distinct("uid");
 
   res.json({ status: "Success", teachers, react: "🔥" });
 });
 
 // Get all teachings/messages
-app.get("/bby/allmsgs", (req, res) => {
-  const allMessages = db.teaches.map(t => ({
+app.get("/bby/allmsgs", async (req, res) => {
+  const allMessages = await Teaching.find({});
+
+  const messages = allMessages.map(t => ({
     ask: t.ask,
     ans: t.answers.join(", ")
   }));
 
-  res.json({ messages: allMessages, react: "💬" });
+  res.json({ messages, react: "💬" });
 });
 
 // Start server
