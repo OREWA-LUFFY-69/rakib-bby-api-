@@ -20,6 +20,12 @@ app.get("/", (req, res) => {
   res.send("Rakib ChatBot API is alive!");
 });
 
+// Function to get random emoji
+const getRandomEmojis = () => {
+  const emojis = ["🙂", "😗", "🥲", "🥸", " 😍", "🤢", "💦", " 🙄", "🙈"", " 🤤", "👀", "🤌", "😎", "🧐", "😷", "🤒", "🤕", "🥵", "😔", "🤥", "😏", "😒", "😶‍🌫️", "😌", "😑", "🤨", "🥺", "🥹", "🧐", "😦", "😡", "🤡", "☠️", "💀", "😈", "👽", "👻", "👾", "😹", "🙀", "😾", "😼", "😿", "💩", "💋", "💔", "💓", "❤️‍🩹", "💨", "💭", "💤", "💪", "👅", "👄", "🫦", "🐸", "🦆", "🐣", "🐰", "🌼", "🌸", "🔪", "✨", "🌚", "🌝", "☔", "🌊", "💧", "🔥", "🗿", "🧬", "❌", "⭕", "✅", "🐽", "😶", "😕", "🥴", "💤", "😪", "👩‍❤️‍💋‍👨", "🤰"];
+  return [emojis[Math.floor(Math.random() * emojis.length)], emojis[Math.floor(Math.random() * emojis.length)]];
+};
+
 app.get("/bby/teach", async (req, res) => {
   const { ask, ans, uid } = req.query;
 
@@ -67,8 +73,9 @@ app.get("/bby", async (req, res) => {
   }
 
   const reply = record.answers[Math.floor(Math.random() * record.answers.length)];
+  const emojis = getRandomEmojis();
 
-  res.json({ text: `${reply} 🧠`, react: font === "3" ? "🧠" : "" });
+  res.json({ text: `${reply} 🧠 ${emojis[0]} ${emojis[1]}`, react: font === "3" ? "🧠" : "" });
 });
 
 app.get("/bby/msg", async (req, res) => {
@@ -108,6 +115,43 @@ app.get("/bby/allmsgs", async (req, res) => {
   }));
 
   res.json({ messages, react: "💬" });
+});
+
+// Edit message route
+app.get("/bby/editmsg", async (req, res) => {
+  const { ask, uid, newAnswer } = req.query;
+
+  if (!ask || !uid || !newAnswer) {
+    return res.status(400).json({ message: "Missing ask, uid, or newAnswer" });
+  }
+
+  const record = await Teaching.findOne({ uid, ask: ask.toLowerCase() });
+  if (!record) {
+    return res.json({ message: "Message not found." });
+  }
+
+  record.answers.push(newAnswer);
+  await record.save();
+
+  res.json({ message: `Message updated! New answer: ${newAnswer}` });
+});
+
+// Delete message route
+app.get("/bby/dltmsg", async (req, res) => {
+  const { ask, uid } = req.query;
+
+  if (!ask || !uid) {
+    return res.status(400).json({ message: "Missing ask or uid" });
+  }
+
+  const record = await Teaching.findOne({ uid, ask: ask.toLowerCase() });
+  if (!record) {
+    return res.json({ message: "Message not found." });
+  }
+
+  await Teaching.deleteOne({ uid, ask: ask.toLowerCase() });
+
+  res.json({ message: `Message deleted successfully.` });
 });
 
 app.listen(PORT, () => {
