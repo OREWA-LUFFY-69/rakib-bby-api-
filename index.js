@@ -67,7 +67,7 @@ app.get("/bby/teach", async (req, res) => {
 });
 
 app.get("/bby", async (req, res) => {
-  const { text, uid, font } = req.query;
+  const { text, uid } = req.query;
 
   if (!text || !uid) {
     return res.status(400).json({ message: "Missing text or uid" });
@@ -81,7 +81,7 @@ app.get("/bby", async (req, res) => {
   const reply = record.answers[Math.floor(Math.random() * record.answers.length)];
   const emojis = getRandomEmojis();
 
-  res.json({ text: `${reply} 🧠 ${emojis[0]} ${emojis[1]}`, react: font === "3" ? "🧠" : "" });
+  res.json({ text: `${reply} ${emojis[0]} ${emojis[1]}`, react: "" });
 });
 
 app.get("/bby/msg", async (req, res) => {
@@ -102,7 +102,7 @@ app.get("/bby/msg", async (req, res) => {
     status: "Success",
     ask: record.ask,
     messages,
-    react: "🧠"
+    react: ""
   });
 });
 
