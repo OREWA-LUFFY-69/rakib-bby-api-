@@ -32,6 +32,12 @@ const getRandomEmojis = () => {
   return [emojis[Math.floor(Math.random() * emojis.length)], emojis[Math.floor(Math.random() * emojis.length)]];
 };
 
+// Helper function to remove emojis
+const removeEmojis = (text) => {
+  return text.replace(/[^\w\s]/g, '');  // This removes non-word characters and emojis
+};
+
+// Teach endpoint
 app.get("/bby/teach", async (req, res) => {
   const { ask, ans, uid } = req.query;
 
@@ -66,6 +72,7 @@ app.get("/bby/teach", async (req, res) => {
   });
 });
 
+// Chat endpoint with emoji-insensitive detection
 app.get("/bby", async (req, res) => {
   const { text, uid } = req.query;
 
@@ -73,7 +80,10 @@ app.get("/bby", async (req, res) => {
     return res.status(400).json({ message: "Missing text or uid" });
   }
 
-  const record = await Teaching.findOne({ ask: text.toLowerCase() });
+  // Remove emojis and convert the text to lowercase for insensitive matching
+  const sanitizedText = removeEmojis(text).toLowerCase();
+
+  const record = await Teaching.findOne({ ask: sanitizedText });
   if (!record) {
     return res.json({ text: `Please teach me this sentence! 🦆💨`, react: "🦆" });
   }
@@ -84,6 +94,7 @@ app.get("/bby", async (req, res) => {
   res.json({ text: `${reply} ${emojis[0]} ${emojis[1]}`, react: "" });
 });
 
+// List all messages for a specific user
 app.get("/bby/msg", async (req, res) => {
   const { ask, uid } = req.query;
 
@@ -106,12 +117,14 @@ app.get("/bby/msg", async (req, res) => {
   });
 });
 
+// Get list of all teachers
 app.get("/bby/teachers", async (req, res) => {
   const teachers = await Teaching.distinct("uid");
 
   res.json({ status: "Success", teachers, react: "🔥" });
 });
 
+// Get all messages
 app.get("/bby/allmsgs", async (req, res) => {
   const allMessages = await Teaching.find({});
 
