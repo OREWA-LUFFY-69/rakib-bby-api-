@@ -2,7 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const { mongoURI } = require("./config.json");
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log("Connected to MongoDB"))
@@ -17,14 +17,14 @@ const teachingSchema = new mongoose.Schema({
 const Teaching = mongoose.model("Teaching", teachingSchema);
 
 app.get("/", (req, res) => {
-  res.send("Rakib ChatBot API is alive!");
+  res.send("Rakib ChatBot API is alive! \n\n DevName: Rakib Adil, \n\n DebFb: m.me/RAKIB.404X \n\n A simple ChatBot API \n\n Don't hate anyone and me i'm also learning.. ❣️");
 });
 
 // Function to get random emoji
 const getRandomEmojis = () => {
   const emojis = [
     "🙂", "😗", "🥲", "🥸", "😍", "🤢", "💦", "🙄", "🙈", "🤤", "👀", "🤌", "😎", "🧐", "😷", "🤒", 
-    "🤕", "🥵", "😔", "🤥", "😏", "😒", "😶‍🌫️", "😌", "😑", "🤨", "🥺", "🥹", "🧐", "😦", "😡", "🤡", 
+    "🤕", "🥵", "😔", "🤥", "😏", " 💫", "🩴", " 🌬️", "😒", "😶‍🌫️", "😌", "😑", "🤨", "🥺", "🥹", "🧐", "😦", "😡", "🤡", 
     "☠️", "💀", "😈", "👽", "👻", "👾", "😹", "🙀", "😾", "😼", "😿", "💩", "💋", "💔", "💓", "❤️‍🩹", 
     "💨", "💭", "💤", "💪", "👅", "👄", "🫦", "🐸", "🦆", "🐣", "🐰", "🌼", "🌸", "🔪", "✨", "🌚", "🌝", 
     "☔", "🌊", "💧", "🔥", "🗿", "🧬", "❌", "⭕", "✅", "🐽", "😶", "😕", "🥴", "💤", "😪", "👩‍❤️‍💋‍👨", "🤰"
@@ -32,12 +32,11 @@ const getRandomEmojis = () => {
   return [emojis[Math.floor(Math.random() * emojis.length)], emojis[Math.floor(Math.random() * emojis.length)]];
 };
 
-// Helper function to remove emojis
+// Function to remove emojis
 const removeEmojis = (text) => {
-  return text.replace(/[^\w\s]/g, '');  // This removes non-word characters and emojis
+  return text.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "").trim();
 };
 
-// Teach endpoint
 app.get("/bby/teach", async (req, res) => {
   const { ask, ans, uid } = req.query;
 
@@ -45,14 +44,15 @@ app.get("/bby/teach", async (req, res) => {
     return res.status(400).json({ message: "Missing ask, ans, or uid" });
   }
 
+  const cleanedAsk = removeEmojis(ask.toLowerCase());
   const answers = ans.split(",").map(a => a.trim()).filter(a => a);
-  let record = await Teaching.findOne({ uid, ask: ask.toLowerCase() });
+  let record = await Teaching.findOne({ uid, ask: cleanedAsk });
 
   if (record) {
     record.answers.push(...answers);
     await record.save();
   } else {
-    record = new Teaching({ uid, ask: ask.toLowerCase(), answers });
+    record = new Teaching({ uid, ask: cleanedAsk, answers });
     await record.save();
   }
 
@@ -72,7 +72,6 @@ app.get("/bby/teach", async (req, res) => {
   });
 });
 
-// Chat endpoint with emoji-insensitive detection
 app.get("/bby", async (req, res) => {
   const { text, uid } = req.query;
 
@@ -80,10 +79,9 @@ app.get("/bby", async (req, res) => {
     return res.status(400).json({ message: "Missing text or uid" });
   }
 
-  // Remove emojis and convert the text to lowercase for insensitive matching
-  const sanitizedText = removeEmojis(text).toLowerCase();
+  const cleanText = removeEmojis(text.toLowerCase());
 
-  const record = await Teaching.findOne({ ask: sanitizedText });
+  const record = await Teaching.findOne({ ask: cleanText });
   if (!record) {
     return res.json({ text: `Please teach me this sentence! 🦆💨`, react: "🦆" });
   }
@@ -94,7 +92,6 @@ app.get("/bby", async (req, res) => {
   res.json({ text: `${reply} ${emojis[0]} ${emojis[1]}`, react: "" });
 });
 
-// List all messages for a specific user
 app.get("/bby/msg", async (req, res) => {
   const { ask, uid } = req.query;
 
@@ -102,7 +99,8 @@ app.get("/bby/msg", async (req, res) => {
     return res.status(400).json({ message: "Missing ask or uid" });
   }
 
-  const record = await Teaching.findOne({ uid, ask: ask.toLowerCase() });
+  const cleanedAsk = removeEmojis(ask.toLowerCase());
+  const record = await Teaching.findOne({ uid, ask: cleanedAsk });
   if (!record) {
     return res.json({ status: "Not Found", messages: [] });
   }
@@ -117,14 +115,12 @@ app.get("/bby/msg", async (req, res) => {
   });
 });
 
-// Get list of all teachers
 app.get("/bby/teachers", async (req, res) => {
   const teachers = await Teaching.distinct("uid");
 
   res.json({ status: "Success", teachers, react: "🔥" });
 });
 
-// Get all messages
 app.get("/bby/allmsgs", async (req, res) => {
   const allMessages = await Teaching.find({});
 
@@ -144,7 +140,8 @@ app.get("/bby/editmsg", async (req, res) => {
     return res.status(400).json({ message: "Missing ask, uid, or newAnswer" });
   }
 
-  const record = await Teaching.findOne({ uid, ask: ask.toLowerCase() });
+  const cleanedAsk = removeEmojis(ask.toLowerCase());
+  const record = await Teaching.findOne({ uid, ask: cleanedAsk });
   if (!record) {
     return res.json({ message: "Message not found." });
   }
@@ -163,12 +160,13 @@ app.get("/bby/dltmsg", async (req, res) => {
     return res.status(400).json({ message: "Missing ask or uid" });
   }
 
-  const record = await Teaching.findOne({ uid, ask: ask.toLowerCase() });
+  const cleanedAsk = removeEmojis(ask.toLowerCase());
+  const record = await Teaching.findOne({ uid, ask: cleanedAsk });
   if (!record) {
     return res.json({ message: "Message not found." });
   }
 
-  await Teaching.deleteOne({ uid, ask: ask.toLowerCase() });
+  await Teaching.deleteOne({ uid, ask: cleanedAsk });
 
   res.json({ message: `Message deleted successfully.` });
 });
